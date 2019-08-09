@@ -20,10 +20,22 @@ func GetResource(w http.ResponseWriter, r *http.Request, c controller.Controller
 
 // CreateResource create a new instance of a resource
 func CreateResource(w http.ResponseWriter, r *http.Request,  c controller.Controller) {
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	resourceName := mux.Vars(r)["resource"]
+	instance, err := c.CreateNewInstance(resourceName)
+	log.Println(instance)
+	if err != nil {
+		wrapError(err, w)
+		return
+	}
+	response := instance.ToStringMap()
+	json.NewEncoder(w).Encode(response)
 }
 
 // DeleteResource delete an instnace of a resource
 func DeleteResource(w http.ResponseWriter, r *http.Request,  c controller.Controller) {
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
+func wrapError(err error, w http.ResponseWriter) {
+	json.NewEncoder(w).Encode(map[string]string{"ok": "false", "reason":err.Error()})
 }

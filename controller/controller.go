@@ -1,6 +1,10 @@
 package controller
 
 import (
+	"fmt"
+	"errors"
+
+	"github.com/lithammer/shortuuid"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -18,20 +22,35 @@ type ResourceConfig struct {
 
 // Controller controls a set of Resources
 type Controller struct {
-	Resources map[string]Resource
-	kubeConfig *kubernetes.Clientset
+	Resources 	map[string]Resource
+	kubeClient	*kubernetes.Clientset
+	suffix 		string
 }
 
 // NewControllerFromConfig return a new controller from configuration
-func NewControllerFromConfig(config Config, kubeConfig *kubernetes.Clientset) Controller {
+func NewControllerFromConfig(config Config, kubeClient *kubernetes.Clientset, suffix string) Controller {
 	resources := make(map[string]Resource)
 	for _, resource := range config.Resources {
 		resources[resource.Name] = resource
 	}
 	return Controller{
 		Resources: resources,
-		kubeConfig: kubeConfig,
+		kubeClient: kubeClient,
+		suffix: suffix,
 	}
+}
+
+// CreateNewInstance creates a new instance inside Kubernetes
+func (c *Controller) CreateNewInstance(name string) (Instance, error) {
+	resource, ok := c.Resources[name]
+	if ok != true {
+		return Instance{}, errors.New("Resource Not found")
+	}
+	u := shortuuid.New()
+	identifier := fmt.Sprintf("%s%s-%s", c.suffix, resource.Name, u)
+	return Instance{
+		name: identifier,
+	}, nil
 }
 
 // Resource is a type of resource that can contains instances
@@ -44,4 +63,11 @@ type Resource struct {
 // Instance is an instance of resource
 type Instance struct {
 	name string
+}
+
+// ToStringMap returns a string map representation of the object
+func (i *Instance) ToStringMap() map[string]string {
+	result := make(map[string]string)
+	result["name"] = i.name
+	return result
 }

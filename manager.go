@@ -25,9 +25,12 @@ func main() {
 	app.HelpFlag.Short('h')
 
 	confPath := app.Flag("conf", "Configuration to be used by the manager").Short('c').Required().String()
+
+	suffix := app.Flag("suffix", "Suffix for the namespace of the created instances").Default("ephem-").String()
 	
 	kubeconfig := app.Flag("kubeconfig", "(optional) absolute path to a kubeconfig file").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
 	runInsideKube := app.Flag("runInsideKube", "if true will setup").Default("false").Bool()
+
 	httpListenPort := app.Flag("httpListenPort", "Port on which the http server should bind on").Default("8080").String()
 	app.Parse(os.Args[1:])
 
@@ -60,7 +63,7 @@ func main() {
 		log.Fatal("Cannot create the kube client driver ", err)
 	}
 
-	contrl := controller.NewControllerFromConfig(config, kubeClient)
+	contrl := controller.NewControllerFromConfig(config, kubeClient, *suffix)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/resources/{resource}", func(w http.ResponseWriter, r *http.Request) {
