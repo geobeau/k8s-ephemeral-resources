@@ -6,6 +6,8 @@ import (
 
 	"github.com/lithammer/shortuuid"
 	"k8s.io/client-go/kubernetes"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Config is an Ephemeral resources manager configuration
@@ -48,6 +50,10 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 	}
 	u := shortuuid.New()
 	identifier := fmt.Sprintf("%s%s-%s", c.suffix, resource.Name, u)
+
+	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier}}
+	c.kubeClient.CoreV1().Namespaces().Create(namespace)
+	
 	return Instance{
 		name: identifier,
 	}, nil

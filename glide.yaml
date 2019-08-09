@@ -1,0 +1,31 @@
+package: github.com/geobeau/k8s-ephemeral-resources
+import:
+- package: github.com/google/go-cmp
+  subpackages:
+  - cmp
+- package: github.com/gorilla/mux
+- package: github.com/lithammer/shortuuid
+- package: github.com/prometheus/client_golang
+  subpackages:
+  - prometheus
+  - prometheus/promauto
+  - prometheus/promhttp
+- package: github.com/sirupsen/logrus
+- package: gopkg.in/alecthomas/kingpin.v2
+- package: gopkg.in/yaml.v3
+- package: k8s.io/api
+  subpackages:
+  - core/v1
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/apis/meta/v1
+  - pkg/watch
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - rest
+  - tools/clientcmd
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
