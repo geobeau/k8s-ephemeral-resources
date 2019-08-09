@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 	"errors"
+	"log"
+	"strings"
 
 	"github.com/lithammer/shortuuid"
 	"k8s.io/client-go/kubernetes"
@@ -48,12 +50,14 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 	if ok != true {
 		return Instance{}, errors.New("Resource Not found")
 	}
-	u := shortuuid.New()
+	u := strings.ToLower(shortuuid.New())
 	identifier := fmt.Sprintf("%s%s-%s", c.suffix, resource.Name, u)
 
 	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier}}
-	c.kubeClient.CoreV1().Namespaces().Create(namespace)
-	
+	_, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
+	if err != nil {
+		log.Println(err.Error())
+	}
 	return Instance{
 		name: identifier,
 	}, nil

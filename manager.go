@@ -24,7 +24,7 @@ func main() {
 	app := kingpin.New("k8s-ephemeral-resources", "A controller to manage and deploy short lived resources")
 	app.HelpFlag.Short('h')
 
-	confPath := app.Flag("conf", "Configuration to be used by the manager").Short('c').Required().String()
+	confPath := app.Flag("conf", "Configuration to be used by the manager").Short('c').Default("./config.yaml").String()
 
 	suffix := app.Flag("suffix", "Suffix for the namespace of the created instances").Default("ephem-").String()
 	
