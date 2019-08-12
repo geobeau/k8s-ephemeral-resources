@@ -63,21 +63,24 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 	}
 
 	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier}}
-	log.Println(namespace)
-	// _, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	return instance, nil
-	// }
+
+	_, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
+	if err != nil {
+		log.Println(err.Error())
+		return instance, nil
+	}
 
 	deployment, err := instance.GenerateKubeDeploymentFromTemplate(resource.DeploymentTemplate)
 	if err != nil {
 		log.Println(err.Error())
 		return instance, nil
 	}
-	log.Printf("%++v, %s", deployment, err)
 
-
+	_, err = c.kubeClient.AppsV1beta2().Deployments(identifier).Create(&deployment)
+	if err != nil {
+		log.Println(err.Error())
+		return instance, nil
+	}
 
 	return instance, nil
 }
@@ -104,19 +107,17 @@ func (i *Instance) ToStringMap() map[string]string {
 // GenerateKubeDeploymentFromTemplate Generate a kubernetes deployment from template
 func (i *Instance) GenerateKubeDeploymentFromTemplate(templateString string) (appsv1.Deployment, error) {
 	deployment, err := i.generateConfigFromTemplate(templateString)
-	// yamlBytes contains a []byte of my yaml job spec
-	// convert the yaml to json
+
 	jsonBytes, err := yaml.YAMLToJSON([]byte(deployment))
 	if err != nil {
 		return appsv1.Deployment{}, err
 	}
-	// unmarshal the json into the kube struct
+
 	var kubeDeployment = appsv1.Deployment{}
 	err = json.Unmarshal(jsonBytes, &kubeDeployment)
 	if err != nil {
 		return appsv1.Deployment{}, err
 	}
-	log.Println(kubeDeployment)
 	return kubeDeployment, nil
 }
 

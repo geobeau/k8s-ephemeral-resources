@@ -3,43 +3,59 @@ resources:
   deploymentTemplate: |-
     apiVersion: apps/v1beta1
     kind: Deployment
-    metadata:
-     name: elasticsearch
-     namespace: "{{.Namespace}}"
+    metadata: 
+        name: elasticsearch
+        namespace: "{{.Namespace}}"
     spec:
-      containers:
-        - name: elasticsearch
-          image: docker.elastic.co/elasticsearch/elasticsearch:7.3.0
-          ports:
-          - containerPort: 7200
-          env:
-          - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        selector:
+            matchLabels:
+                app: elasticsearch
+        replicas: 1
+        template:
+            metadata:
+                labels:
+                    app: elasticsearch
+            spec:
+                initContainers:
+                - name: init-sysctl
+                    image: busybox:1.27.2
+                    command:
+                    - sysctl
+                    - -w
+                    - vm.max_map_count=262144
+                    securityContext:
+                    privileged: true
+                containers: 
+                - name: elasticsearch
+                  image: "docker.elastic.co/elasticsearch/elasticsearch:7.3.0"
+                  env:
+                  - name: "ES_JAVA_OPTS"
+                    value: "-Xms512m -Xmx512m"
+                  ports: 
+                  - containerPort: 7200
   serviceTemplate: |-
     apiVersion: v1
     kind: Service
     metadata:
-    labels:
-        app: elasticsearch
-    name: elasticsearch
-    namespace: {service_namespace}
-    annotations:
-        "consul.hashicorp.com/service-sync": "true"
-        "consul.hashicorp.com/service-name": "{service_namespace}"
-        "consul.hashicorp.com/service-tags": "nocheck,http"
-        "consul.hashicorp.com/service-meta-OWNER": nosql
-        "consul.hashicorp.com/service-meta-REQUESTER": {owner}
-        "consul.hashicorp.com/service-meta-ttl": {ttl}
+        labels:
+            app: elasticsearch
+        name: elasticsearch
+        namespace: "{{.Namespace}}"
+        annotations:
+            "consul.hashicorp.com/service-sync": "true"
+            "consul.hashicorp.com/service-name": "{{.Namespace}}"
+            "consul.hashicorp.com/service-tags": "nocheck,http"
+            "consul.hashicorp.com/service-meta-OWNER": nosql
+            "consul.hashicorp.com/service-meta-REQUESTER": test
+            "consul.hashicorp.com/service-meta-ttl": test
     spec:
-    externalTrafficPolicy: Local
-    ports:
-    - name: elasticsearch
-        nodePort: {attributed_port}
-        port: {attributed_port}
-        protocol: TCP
-        targetPort: 9090
-    selector:
-        app: elasticsearch
-    sessionAffinity: None
-    type: NodePort
-    status:
-    loadBalancer: {}
+        externalTrafficPolicy: Local
+        ports:
+        - name: elasticsearch
+            protocol: TCP
+            port: 7200
+            targetPort: 7200
+        selector:
+            app: elasticsearch
+        sessionAffinity: None
+        type: NodePort
