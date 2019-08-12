@@ -5,7 +5,7 @@ resources:
     kind: Deployment
     metadata:
      name: elasticsearch
-     namespace: {service_namespace}
+     namespace: "{{.Namespace}}"
     spec:
       containers:
         - name: elasticsearch

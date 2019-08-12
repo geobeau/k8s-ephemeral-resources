@@ -5,10 +5,15 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"bytes"
+	"text/template"
+	"encoding/json"
 
 	"github.com/lithammer/shortuuid"
+	"github.com/ghodss/yaml"
 	"k8s.io/client-go/kubernetes"
 	apiv1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -53,14 +58,28 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 	u := strings.ToLower(shortuuid.New())
 	identifier := fmt.Sprintf("%s%s-%s", c.suffix, resource.Name, u)
 
+	instance := Instance{
+		Namespace: identifier,
+	}
+
 	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier}}
-	_, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
+	log.Println(namespace)
+	// _, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return instance, nil
+	// }
+
+	deployment, err := instance.GenerateKubeDeploymentFromTemplate(resource.DeploymentTemplate)
 	if err != nil {
 		log.Println(err.Error())
+		return instance, nil
 	}
-	return Instance{
-		name: identifier,
-	}, nil
+	log.Printf("%++v, %s", deployment, err)
+
+
+
+	return instance, nil
 }
 
 // Resource is a type of resource that can contains instances
@@ -72,12 +91,46 @@ type Resource struct {
 
 // Instance is an instance of resource
 type Instance struct {
-	name string
+	Namespace string
 }
 
 // ToStringMap returns a string map representation of the object
 func (i *Instance) ToStringMap() map[string]string {
 	result := make(map[string]string)
-	result["name"] = i.name
+	result["name"] = i.Namespace
 	return result
+}
+
+// GenerateKubeDeploymentFromTemplate Generate a kubernetes deployment from template
+func (i *Instance) GenerateKubeDeploymentFromTemplate(templateString string) (appsv1.Deployment, error) {
+	deployment, err := i.generateConfigFromTemplate(templateString)
+	// yamlBytes contains a []byte of my yaml job spec
+	// convert the yaml to json
+	jsonBytes, err := yaml.YAMLToJSON([]byte(deployment))
+	if err != nil {
+		return appsv1.Deployment{}, err
+	}
+	// unmarshal the json into the kube struct
+	var kubeDeployment = appsv1.Deployment{}
+	err = json.Unmarshal(jsonBytes, &kubeDeployment)
+	if err != nil {
+		return appsv1.Deployment{}, err
+	}
+	log.Println(kubeDeployment)
+	return kubeDeployment, nil
+}
+
+// generateDeploymentFromTemplate Generate a deployment from template
+func (i *Instance) generateConfigFromTemplate(templateString string) (string, error) {
+	tmpl, err := template.New(i.Namespace).Parse(templateString)
+	if err != nil {
+		return "", err 
+	}
+
+	var resultBytes bytes.Buffer
+	err = tmpl.Execute(&resultBytes, i)
+	if err != nil {
+		return "", err 
+	}
+	return resultBytes.String(), nil
 }
