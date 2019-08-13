@@ -64,19 +64,37 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 
 	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier}}
 
+	log.Println("Creating namespace: ", identifier)
+
 	_, err := c.kubeClient.CoreV1().Namespaces().Create(namespace)
 	if err != nil {
 		log.Println(err.Error())
 		return instance, nil
 	}
 
+	log.Println("Parsing deployment configuration")
 	deployment, err := instance.GenerateKubeDeploymentFromTemplate(resource.DeploymentTemplate)
 	if err != nil {
 		log.Println(err.Error())
 		return instance, nil
 	}
 
+	log.Println("Creating kubernetes deployment")
 	_, err = c.kubeClient.AppsV1beta2().Deployments(identifier).Create(&deployment)
+	if err != nil {
+		log.Println(err.Error())
+		return instance, nil
+	}
+
+	log.Println("Parsing service configuration")
+	service, err := instance.GenerateKubeServiceFromTemplate(resource.ServiceTemplate)
+	if err != nil {
+		log.Println(err.Error())
+		return instance, nil
+	}
+
+	log.Println("Creating kubernetes service")
+	_, err = c.kubeClient.CoreV1().Services(identifier).Create(&service)
 	if err != nil {
 		log.Println(err.Error())
 		return instance, nil
@@ -89,7 +107,7 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 type Resource struct {
 	Name				string `yaml:"resourceName"`
 	DeploymentTemplate	string `yaml:"deploymentTemplate"`
-	ResourceTemplate	string `yaml:"serviceTemplate"`
+	ServiceTemplate	string `yaml:"serviceTemplate"`
 }
 
 // Instance is an instance of resource
@@ -116,9 +134,26 @@ func (i *Instance) GenerateKubeDeploymentFromTemplate(templateString string) (ap
 	var kubeDeployment = appsv1.Deployment{}
 	err = json.Unmarshal(jsonBytes, &kubeDeployment)
 	if err != nil {
-		return appsv1.Deployment{}, err
+		return kubeDeployment, err
 	}
 	return kubeDeployment, nil
+}
+
+// GenerateKubeServiceFromTemplate Generate a kubernetes service from template
+func (i *Instance) GenerateKubeServiceFromTemplate(templateString string) (apiv1.Service, error) {
+	service, err := i.generateConfigFromTemplate(templateString)
+
+	jsonBytes, err := yaml.YAMLToJSON([]byte(service))
+	if err != nil {
+		return apiv1.Service{}, err
+	}
+
+	var kubeService = apiv1.Service{}
+	err = json.Unmarshal(jsonBytes, &kubeService)
+	if err != nil {
+		return kubeService, err
+	}
+	return kubeService, nil
 }
 
 // generateDeploymentFromTemplate Generate a deployment from template
