@@ -45,7 +45,7 @@ func NewControllerFromConfig(config Config, kubeClient *kubernetes.Clientset, su
 }
 
 // CreateNewInstance creates a new instance inside Kubernetes
-func (c *Controller) CreateNewInstance(name string) (Instance, error) {
+func (c *Controller) CreateNewInstance(name string, owner string) (Instance, error) {
 	resource, ok := c.Resources[name]
 	if ok != true {
 		return Instance{}, errors.New("Resource Not found")
@@ -55,11 +55,13 @@ func (c *Controller) CreateNewInstance(name string) (Instance, error) {
 
 	instance := Instance{
 		Namespace: identifier,
+		Owner: owner,
 		ExpirationDate: time.Now().Add(resource.DurationDefault).Unix(),
 	}
 	labels := make(map[string]string)
-	labels["k8s-ephemeral-resource"] = name
-	labels["ExpirationDate"] = strconv.FormatInt(instance.ExpirationDate, 10)
+	labels["k8sEphemResourceName"] = name
+	labels["k8sEphemResourceExpirationDate"] = strconv.FormatInt(instance.ExpirationDate, 10)
+	labels["k8sEphemResourceOwner"] = owner
 	namespace := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: identifier, Labels: labels}}
 
 	log.Println("Creating namespace: ", identifier)
@@ -103,14 +105,14 @@ func (c *Controller) CleanupLoop(delay time.Duration) {
 	for {
 		log.Println("Running verification loop")
 		for _, resource := range c.Resources {
-			listOptions := metav1.ListOptions{LabelSelector: "k8s-ephemeral-resource="+resource.Name}
+			listOptions := metav1.ListOptions{LabelSelector: "k8sEphemResourceName="+resource.Name}
 			list, err := c.kubeClient.CoreV1().Namespaces().List(listOptions)
 			if err != nil {
 				log.Println("Error:", err)
 				continue
 			}
 			for _, namespace := range list.Items {
-				expirationDateStr, ok := namespace.Labels["ExpirationDate"]
+				expirationDateStr, ok := namespace.Labels["k8sEphemResourceExpirationDate"]
 				if ok != true {
 					log.Printf("Ignoring: %s, expiration label not found", namespace.Name)
 					continue
@@ -147,6 +149,7 @@ type Resource struct {
 // Instance is an instance of resource
 type Instance struct {
 	Namespace		string
+	Owner			string
 	ExpirationDate	int64
 }
 

@@ -57,8 +57,7 @@ resources:
             "consul.hashicorp.com/service-sync": "true"
             "consul.hashicorp.com/service-name": "kubernetes-{{.Namespace}}"
             "consul.hashicorp.com/service-tags": "nocheck,http"
-            "consul.hashicorp.com/service-meta-OWNER": nosql
-            "consul.hashicorp.com/service-meta-REQUESTER": test
+            "consul.hashicorp.com/service-meta-REQUESTER": "{{.Owner}}"
             "consul.hashicorp.com/service-meta-experiration-date": "{{.ExpirationDate}}"
     spec:
         externalTrafficPolicy: Local
