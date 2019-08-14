@@ -32,6 +32,8 @@ func main() {
 	runInsideKube := app.Flag("runInsideKube", "if true will setup").Default("false").Bool()
 
 	httpListenPort := app.Flag("httpListenPort", "Port on which the http server should bind on").Default("8080").String()
+
+	cleanUpInterval := app.Flag("interval", "Interval between searching for resources to clean-up").Short('d').Default("1m").Duration()
 	app.Parse(os.Args[1:])
 
 	// Parsing Configuration
@@ -76,6 +78,8 @@ func main() {
 		api.DeleteResource(w, r, contrl)
 	}).Methods("DELETE")
 	http.Handle("/", r)
+
+	go contrl.CleanupLoop(*cleanUpInterval)
 
 	log.Println("Serving api on:", *httpListenPort)
 	log.Fatal(http.ListenAndServe(":" + *httpListenPort, nil))

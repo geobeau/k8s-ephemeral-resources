@@ -1,5 +1,6 @@
 resources:
 - resourceName: elasticsearch
+  durationDefault: "5m"
   deploymentTemplate: |-
     apiVersion: apps/v1beta1
     kind: Deployment
@@ -58,7 +59,7 @@ resources:
             "consul.hashicorp.com/service-tags": "nocheck,http"
             "consul.hashicorp.com/service-meta-OWNER": nosql
             "consul.hashicorp.com/service-meta-REQUESTER": test
-            "consul.hashicorp.com/service-meta-ttl": test
+            "consul.hashicorp.com/service-meta-experiration-date": "{{.ExpirationDate}}"
     spec:
         externalTrafficPolicy: Local
         ports:

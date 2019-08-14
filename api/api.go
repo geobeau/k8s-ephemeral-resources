@@ -22,8 +22,8 @@ func GetResource(w http.ResponseWriter, r *http.Request, c controller.Controller
 func CreateResource(w http.ResponseWriter, r *http.Request,  c controller.Controller) {
 	resourceName := mux.Vars(r)["resource"]
 	instance, err := c.CreateNewInstance(resourceName)
-	log.Println(instance)
 	if err != nil {
+		log.Println(err.Error())
 		wrapError(err, w)
 		return
 	}
